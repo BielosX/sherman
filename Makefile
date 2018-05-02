@@ -7,3 +7,6 @@ build_main: build_dependencies
 
 build_dependencies:
 	${PYTHON} download_dep.py
+
+clean:
+	rm -rf sherman
