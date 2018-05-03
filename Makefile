@@ -32,3 +32,4 @@ clean:
 	rm -rf bin/sherman
 	rm -rf bin
 	rm -rf src/*.o
+	rm -rf obj

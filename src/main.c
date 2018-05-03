@@ -4,7 +4,6 @@
 
 #include "global_config.h"
 
-
 int main(int argc, char** argv) {
     if (argc == 1) {
         printf("no path to config file specified\n");

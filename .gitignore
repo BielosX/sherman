@@ -6,4 +6,5 @@ include/*.swp
 src/*.swp
 src/*.o
 obj
-
+*.swo
+src/*.swo
