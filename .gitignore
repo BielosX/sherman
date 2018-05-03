@@ -1,3 +1,6 @@
 dependencies
 sherman
 bin
+*.swp
+include/*.swp
+src/*.swp

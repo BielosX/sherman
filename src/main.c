@@ -19,6 +19,7 @@ int main(int argc, char** argv) {
     json_t* config_json = json_loadf(config, 0, &error);
     if (config_json == NULL) {
         printf("Unable to decode config file\n");
+        printf("%s\n", error.text);
     }
     json_decref(config_json);
     fclose(config);
