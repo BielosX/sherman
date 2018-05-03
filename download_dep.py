@@ -3,6 +3,12 @@ import tarfile
 import subprocess
 
 from pathlib import Path, PurePath
+from enum import Enum
+
+class Compression(Enum):
+    GZ = 1
+    XZ = 2
+
 
 class Dependencies:
 
@@ -11,10 +17,14 @@ class Dependencies:
         self.path.mkdir(exist_ok=True)
         self.versions = versions
 
-    def download(self, url, filename):
+    def download(self, url, filename, comp):
         path_to_tar = self.path.as_posix() + '/' + filename
         urllib.request.urlretrieve(url, path_to_tar)
-        tar = tarfile.open(path_to_tar, "r:gz")
+        method = {
+                Compression.GZ: lambda p: tarfile.open(p, "r:gz"),
+                Compression.XZ: lambda p: tarfile.open(p, "r:xz")
+                }
+        tar = method[comp](path_to_tar)
         tar.extractall(path=self.path.as_posix())
         tar.close()
 
@@ -26,7 +36,7 @@ class Dependencies:
         else:
             tar_file = 'jansson-{}.tar.gz'.format(version)
             url = 'http://www.digip.org/jansson/releases/{}'.format(tar_file)
-            self.download(url, tar_file)
+            self.download(url, tar_file, Compression.GZ)
             self.build(name)
 
     def build_all(self):
