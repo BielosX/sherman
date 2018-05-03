@@ -1,0 +1,4 @@
+{
+    "maxQueueSize": 10,
+    "maxNumberOfTopics":10
+}
