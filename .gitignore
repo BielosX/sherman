@@ -5,3 +5,5 @@ bin
 include/*.swp
 src/*.swp
 src/*.o
+obj
+
