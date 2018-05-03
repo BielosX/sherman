@@ -25,6 +25,9 @@ create_obj_dir:
 build_dependencies:
 	${PYTHON} download_dep.py
 
+valgrind:
+	valgrind bin/sherman bin/config.json
+
 clean:
 	rm -rf bin/sherman
 	rm -rf bin
