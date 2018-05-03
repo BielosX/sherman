@@ -12,6 +12,8 @@
 struct GlobalConfig {
     int max_queue_size;
     int max_number_of_topics;
+    int max_listeners_per_topic;
+    int max_topic_name_length;
 };
 
 struct GlobalConfig global_config;
@@ -52,6 +54,10 @@ int load_config(char* file_path) {
     global_config.max_queue_size = json_integer_value(value);
     TRY(get_value_from_object(config_json, "maxNumberOfTopics", &value), parse_error);
     global_config.max_number_of_topics = json_integer_value(value);
+    TRY(get_value_from_object(config_json, "maxListenersPerTopic", &value), parse_error);
+    global_config.max_listeners_per_topic = json_integer_value(value);
+    TRY(get_value_from_object(config_json, "maxTopicNameLength", &value), parse_error);
+    global_config.max_topic_name_length = json_integer_value(value);
     result = 0;
     goto close_file;
 parse_error:
@@ -65,6 +71,8 @@ close_file:
 void print_global_config(void) {
     printf("max_queue_size: %d\n", global_config.max_queue_size);
     printf("max_number_of_topics: %d\n", global_config.max_number_of_topics);
+    printf("max_listeners_per_topic: %d\n", global_config.max_listeners_per_topic);
+    printf("max_topic_name_length: %d\n", global_config.max_topic_name_length);
 }
 
 int main(int argc, char** argv) {
