@@ -1,6 +1,7 @@
 import urllib.request
 import tarfile
 import subprocess
+import re
 
 from pathlib import Path, PurePath
 from enum import Enum
@@ -16,6 +17,7 @@ class Dependencies:
         self.path = Path('dependencies')
         self.path.mkdir(exist_ok=True)
         self.versions = versions
+        self.glib_pattern = re.compile("(\d+\.\d+)\.\d+")
 
     def download(self, url, filename, comp):
         path_to_tar = self.path.as_posix() + '/' + filename
@@ -31,16 +33,28 @@ class Dependencies:
     def build_jansson(self):
         version = self.versions['jansson']
         name = 'jansson-{}'.format(version)
-        if self.is_already_downloaded(name):
-            print(name + " already downloaded")
-        else:
+        def b():
             tar_file = 'jansson-{}.tar.gz'.format(version)
             url = 'http://www.digip.org/jansson/releases/{}'.format(tar_file)
             self.download(url, tar_file, Compression.GZ)
             self.build(name)
+        self.eventually_build(name, b)
+
+    def build_glib(self):
+        version = self.versions['glib']
+        major = pattern = self.glib_pattern.search(version)
+        name = 'glib-{}'.format(version)
+        def b():
+            if major is not None:
+                tar_file = "glib-{}.tar.xz".format(version)
+                url = 'https://ftp.gnome.org/pub/gnome/sources/glib/{}/{}'.format(major.group(1), tar_file)
+                self.download(url, tar_file, Compression.XZ)
+                self.build(name)
+        self.eventually_build(name, b)
 
     def build_all(self):
         self.build_jansson()
+        self.build_glib()
 
     def build(self, dep):
         p = PurePath("{}-build".format(dep))
@@ -59,9 +73,17 @@ class Dependencies:
         subdirs = [x for x in self.path.iterdir() if x.is_dir()]
         return name in map(lambda x: x.name, subdirs)
 
+    def eventually_build(self, name, func):
+        if self.is_already_downloaded(name):
+            print(name + " already downloaded")
+        else:
+            func()
+
+
 if __name__ == "__main__":
     versions = {
-            'jansson': '2.11'
+            'jansson': '2.11',
+            'glib': '2.56.1'
             }
     dep = Dependencies(versions)
     dep.build_all()
