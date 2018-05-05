@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <errno.h>
 
 #include "concurrent_queue.h"
 
@@ -7,8 +8,12 @@ void concurrent_queue_push(concurrent_queue_t* queue, void* item) {
     node = (concurrent_queue_node_t*)malloc(sizeof(concurrent_queue_node_t));
     node->value = item;
     node->next = NULL;
-    sem_trywait(&queue->tickets);
+    int r = sem_trywait(&queue->tickets);
+    int error = errno;
     pthread_mutex_lock(&queue->head_mutex);
+    if (r == -1 && error == EAGAIN) {
+        pthread_mutex_lock(&queue->tail_mutex);
+    }
     if (queue->head == NULL || queue->tail == NULL) {
         queue->head = node;
         queue->tail = node;
@@ -17,6 +22,9 @@ void concurrent_queue_push(concurrent_queue_t* queue, void* item) {
         queue->head->next = node;
         queue->head = node;
         sem_post(&queue->tickets);
+    }
+    if (r == -1 && error == EAGAIN) {
+        pthread_mutex_unlock(&queue->tail_mutex);
     }
     sem_post(&queue->tickets);
     pthread_mutex_unlock(&queue->head_mutex);
