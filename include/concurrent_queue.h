@@ -1,8 +1,8 @@
 #ifndef __CONCURRENT_QUEUE_H__
 #define __CONCURRENT_QUEUE_H__
 
-#include <stdatomic.h>
 #include <pthread.h>
+#include <semaphore.h>
 
 struct concurrent_queue_node {
     void* value;
@@ -16,7 +16,7 @@ typedef struct {
     concurrent_queue_node_t* tail;
     pthread_mutex_t head_mutex;
     pthread_mutex_t tail_mutex;
-    atomic_int tickets;
+    sem_t tickets;
 } concurrent_queue_t;
 
 void concurrent_queue_push(concurrent_queue_t* queue, void* item);
