@@ -16,8 +16,8 @@ void concurrent_queue_push(concurrent_queue_t* queue, void* item) {
     else {
         queue->head->next = node;
         queue->head = node;
+        sem_post(&queue->tickets);
     }
-    sem_post(&queue->tickets);
     sem_post(&queue->tickets);
     pthread_mutex_unlock(&queue->head_mutex);
 }
