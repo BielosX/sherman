@@ -6,6 +6,7 @@ typedef struct {
     int max_number_of_topics;
     int max_listeners_per_topic;
     int max_topic_name_length;
+    int max_connections;
 } global_config_t;
 
 extern global_config_t global_config;

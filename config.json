@@ -2,5 +2,6 @@
     "maxQueueSize": 10,
     "maxNumberOfTopics":11,
     "maxListenersPerTopic":12,
-    "maxTopicNameLength":13
+    "maxTopicNameLength":13,
+    "maxConnections":4
 }

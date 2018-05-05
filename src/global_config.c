@@ -54,6 +54,8 @@ int load_config(char* file_path) {
     global_config.max_listeners_per_topic = json_integer_value(value);
     TRY(get_value_from_object(config_json, "maxTopicNameLength", &value), parse_error);
     global_config.max_topic_name_length = json_integer_value(value);
+    TRY(get_value_from_object(config_json, "maxConnections", &value), parse_error);
+    global_config.max_connections = json_integer_value(value);
     result = 0;
     goto close_file;
 parse_error:
@@ -69,4 +71,5 @@ void print_global_config(void) {
     printf("max_number_of_topics: %d\n", global_config.max_number_of_topics);
     printf("max_listeners_per_topic: %d\n", global_config.max_listeners_per_topic);
     printf("max_topic_name_length: %d\n", global_config.max_topic_name_length);
+    printf("max_connections: %d\n", global_config.max_connections);
 }
