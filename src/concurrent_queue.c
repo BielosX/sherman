@@ -11,7 +11,7 @@ void concurrent_queue_push(concurrent_queue_t* queue, void* item) {
     /* this semaphore works as a tickets machine for poping threads.
      * Because of it it is possible to stall the thread if the queue is empty.
      * If the size of the queue is higher than one this semaphore allows
-     * threads to pop and push concurrently withaut stalls */
+     * threads to pop and push concurrently without stalls */
     int r = sem_trywait(&queue->tickets);
     int error = errno;
     /* This mutex prevents from concurrent head pointer modification. It may happen if two threads
