@@ -21,7 +21,8 @@ void concurrent_queue_push(concurrent_queue_t* queue, void* item) {
      * 1) queue is empty
      * 2) poping thread has just taken the last element
      * to prevent concurrent access to tail pointer (wich may happen if it is taken by poping thread)
-     * tail_mutex is locked. Because it is not possible to disctinct it may be locked even if queue has not ever contained any item */
+     * tail_mutex is locked. Because it is not possible to disctinct
+     *      it may be locked even if queue has not ever contained any item */
     if (r == -1 && error == EAGAIN) {
         pthread_mutex_lock(&queue->tail_mutex);
     }
