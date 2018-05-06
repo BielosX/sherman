@@ -22,7 +22,10 @@ void concurrent_queue_push(concurrent_queue_t* queue, void* item) {
      * 2) poping thread has just taken the last element
      * to prevent concurrent access to tail pointer (wich may happen if it is taken by poping thread)
      * tail_mutex is locked. Because it is not possible to disctinct
-     *      it may be locked even if queue has not ever contained any item */
+     *      it may be locked even if queue has not ever contained any item.
+     * It is also possible that one thread that tries to push was preempted before head_mutex lock
+     *      and during this time many threads pushed items. Then This thread will lock tail_mutex
+     *      even if it is unnecessary (because of the r and error local variables that have not changed since preemption) */
     if (r == -1 && error == EAGAIN) {
         pthread_mutex_lock(&queue->tail_mutex);
     }
