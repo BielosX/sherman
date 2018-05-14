@@ -130,7 +130,7 @@ int main(int argc, char** argv) {
     }
     if (thread_init_failed) {
         for (int x = 0; x < global_config.threads; ++x) {
-            pthread_kill(threads[x], 9);
+            pthread_cancel(threads[x]);
         }
         result = -1;
         close(fd);
