@@ -134,7 +134,7 @@ int main(int argc, char** argv) {
         }
         result = -1;
         close(fd);
-        goto exit_main;
+        goto delete_queue;
     }
     int client_fd;
     while (true) {
@@ -147,12 +147,13 @@ int main(int argc, char** argv) {
             concurrent_queue_push(queue, client_socket_create(client_fd));
         }
     }
-    concurrent_queue_delete(queue);
     close(fd);
     for (int x = 0; x < global_config.threads; ++x) {
         pthread_join(threads[x], &thread_result);
     }
     UNUSED(thread_result);
+delete_queue:
+    concurrent_queue_delete(queue);
 exit_main:
     free(threads);
     return result;
