@@ -9,6 +9,7 @@
 #include <arpa/inet.h>
 #include <pthread.h>
 #include <stdbool.h>
+#include <signal.h>
 
 #include "global_config.h"
 #include "concurrent_queue.h"
@@ -75,7 +76,7 @@ void* consumer_thread_main(void* args) {
     concurrent_queue_t* queue = (concurrent_queue_t*)args;
     while (true) {
         client_socket_t* client = (client_socket_t*)concurrent_queue_pop(queue);
-        printf("Queue pop\n");
+        printf("[ThreadId=%lu] Queue pop\n", pthread_self());
         client_socket_read(client, buffer, 128);
         buffer[127] = '\0';
         printf("%s\n", buffer);
@@ -96,7 +97,7 @@ int main(int argc, char** argv) {
     }
     struct sockaddr_in addr_in;
     int fd = socket(AF_INET, SOCK_STREAM, 0);
-    pthread_t background_thread;
+    pthread_t* threads = (pthread_t*)malloc(sizeof(pthread_t) * global_config.threads);
     void* thread_result;
     if (fd < 0) {
         perror("Unable to create socket");
@@ -119,8 +120,18 @@ int main(int argc, char** argv) {
     print_global_config();
     concurrent_queue_t* queue;
     queue = concurrent_queue_new();
-    if (pthread_create(&background_thread, NULL, consumer_thread_main, queue) != 0) {
-        printf("ERROR: Unable to create thread\n");
+    bool thread_init_failed = false;
+    for (int x = 0; x < global_config.threads; ++x) {
+        if (pthread_create(&threads[x], NULL, consumer_thread_main, queue) != 0) {
+            printf("ERROR: Unable to create thread\n");
+            thread_init_failed = true;
+            break;
+        }
+    }
+    if (thread_init_failed) {
+        for (int x = 0; x < global_config.threads; ++x) {
+            pthread_kill(threads[x], 9);
+        }
         result = -1;
         close(fd);
         goto exit_main;
@@ -138,8 +149,11 @@ int main(int argc, char** argv) {
     }
     concurrent_queue_delete(queue);
     close(fd);
-    pthread_join(background_thread, &thread_result);
+    for (int x = 0; x < global_config.threads; ++x) {
+        pthread_join(threads[x], &thread_result);
+    }
     UNUSED(thread_result);
 exit_main:
+    free(threads);
     return result;
 }

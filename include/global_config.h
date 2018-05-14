@@ -8,6 +8,7 @@ typedef struct {
     int max_topic_name_length;
     int max_connections;
     int port;
+    int threads;
 } global_config_t;
 
 extern global_config_t global_config;

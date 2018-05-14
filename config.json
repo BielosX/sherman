@@ -3,5 +3,6 @@
     "maxNumberOfTopics":11,
     "maxListenersPerTopic":12,
     "maxTopicNameLength":13,
-    "maxConnections":4
+    "maxConnections":4,
+    "threads": 4
 }

@@ -62,6 +62,8 @@ int load_config(char* file_path) {
     global_config.max_topic_name_length = json_integer_value(value);
     TRY(get_value_from_object(config_json, "maxConnections", &value), parse_error);
     global_config.max_connections = json_integer_value(value);
+    TRY(get_value_from_object(config_json, "threads", &value), parse_error);
+    global_config.threads = json_integer_value(value);
     silent_get = true;
     if (get_value_from_object(config_json, "port", &value) == -1) {
         global_config.port = DEFAULT_PORT;
@@ -87,4 +89,5 @@ void print_global_config(void) {
     printf("max_topic_name_length: %d\n", global_config.max_topic_name_length);
     printf("max_connections: %d\n", global_config.max_connections);
     printf("port: %d\n", global_config.port);
+    printf("threads: %d\n", global_config.threads);
 }
