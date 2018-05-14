@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <errno.h>
+#include <stdio.h>
 
 #include "concurrent_queue.h"
 
@@ -60,7 +61,6 @@ void* concurrent_queue_pop(concurrent_queue_t* queue) {
     queue->tail = node->next;
     free(node);
     pthread_mutex_unlock(&queue->tail_mutex);
-    sem_post(&queue->tickets);
     return ptr;
 }
 
