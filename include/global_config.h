@@ -1,14 +1,16 @@
 #ifndef __GLOBAL_CONFIG_H__
 #define __GLOBAL_CONFIG_H__
 
+#include <stdint.h>
+
 typedef struct {
-    int max_queue_size;
-    int max_number_of_topics;
-    int max_listeners_per_topic;
-    int max_topic_name_length;
-    int max_connections;
-    int port;
-    int threads;
+    uint32_t max_queue_size;
+    uint32_t max_number_of_topics;
+    uint32_t max_listeners_per_topic;
+    uint32_t max_topic_name_length;
+    uint32_t max_connections;
+    uint32_t port;
+    uint32_t threads;
 } global_config_t;
 
 extern global_config_t global_config;

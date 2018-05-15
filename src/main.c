@@ -13,6 +13,7 @@
 
 #include "global_config.h"
 #include "concurrent_queue.h"
+#include "error.h"
 
 #define UNUSED(x) (void)x
 
@@ -86,6 +87,52 @@ void* consumer_thread_main(void* args) {
     return NULL;
 }
 
+int init_threads(concurrent_queue_t* queue, pthread_t* threads, size_t len) {
+    bool thread_init_failed = false;
+    int result;
+    for (unsigned int x = 0; x < len; ++x) {
+        if (pthread_create(&threads[x], NULL, consumer_thread_main, queue) != 0) {
+            printf("ERROR: Unable to create thread\n");
+            thread_init_failed = true;
+            break;
+        }
+    }
+    result = 0;
+    if (thread_init_failed) {
+        for (unsigned int x = 0; x < global_config.threads; ++x) {
+            pthread_cancel(threads[x]);
+        }
+        result = -1;
+    }
+    return result;
+}
+
+int inet_socket_bind(int fd, struct sockaddr_in* addr) {
+    int result = 0;
+    if (bind(fd, (struct sockaddr*)addr, sizeof(struct sockaddr_in)) == -1) {
+        perror("Unable to bind socket");
+        result = -1;
+    }
+    return result;
+}
+
+int inet_socket_listen(int fd) {
+    int result = 0;
+    if (listen(fd, 5) == -1) {
+        perror("Unable to mark socket as pasive");
+        result = -1;
+    }
+    return result;
+}
+
+void wait_for_all(pthread_t* threads, size_t len) {
+    void* thread_result;
+    for (unsigned int x = 0; x < len; ++x) {
+        pthread_join(threads[x], &thread_result);
+    }
+    UNUSED(thread_result);
+}
+
 int main(int argc, char** argv) {
     int result = 0;
     if (argc == 1) {
@@ -98,44 +145,18 @@ int main(int argc, char** argv) {
     struct sockaddr_in addr_in;
     int fd = socket(AF_INET, SOCK_STREAM, 0);
     pthread_t* threads = (pthread_t*)malloc(sizeof(pthread_t) * global_config.threads);
-    void* thread_result;
-    if (fd < 0) {
+    if (fd == -1) {
         perror("Unable to create socket");
         result = -1;
         goto exit_main;
     }
     set_serv_addr(&addr_in);
-    if (bind(fd, (struct sockaddr*)&addr_in, sizeof(struct sockaddr_in)) == -1) {
-        perror("Unable to bind socket");
-        result = -1;
-        close(fd);
-        goto exit_main;
-    }
-    if (listen(fd, 5) == -1) {
-        perror("Unable to mark socket as pasive");
-        result = -1;
-        close(fd);
-        goto exit_main;
-    }
+    TRY(inet_socket_bind(fd, &addr_in), exit_main);
+    TRY(inet_socket_listen(fd), exit_main);
     print_global_config();
     concurrent_queue_t* queue;
     queue = concurrent_queue_new();
-    bool thread_init_failed = false;
-    for (int x = 0; x < global_config.threads; ++x) {
-        if (pthread_create(&threads[x], NULL, consumer_thread_main, queue) != 0) {
-            printf("ERROR: Unable to create thread\n");
-            thread_init_failed = true;
-            break;
-        }
-    }
-    if (thread_init_failed) {
-        for (int x = 0; x < global_config.threads; ++x) {
-            pthread_cancel(threads[x]);
-        }
-        result = -1;
-        close(fd);
-        goto delete_queue;
-    }
+    TRY(init_threads(queue, threads, global_config.threads), delete_queue);
     int client_fd;
     while (true) {
         client_fd = accept(fd, NULL, NULL);
@@ -147,13 +168,10 @@ int main(int argc, char** argv) {
             concurrent_queue_push(queue, client_socket_create(client_fd));
         }
     }
-    close(fd);
-    for (int x = 0; x < global_config.threads; ++x) {
-        pthread_join(threads[x], &thread_result);
-    }
-    UNUSED(thread_result);
+    wait_for_all(threads, global_config.threads);
 delete_queue:
     concurrent_queue_delete(queue);
+    close(fd);
 exit_main:
     free(threads);
     return result;

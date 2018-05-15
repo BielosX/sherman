@@ -6,11 +6,8 @@
 #include <jansson.h>
 
 #include "global_config.h"
+#include "error.h"
 
-#define TRY(f, g) \
-    if (f < 0) {\
-        goto g; \
-    } \
 
 #define DEFAULT_PORT 1234
 
