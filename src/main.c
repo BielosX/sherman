@@ -10,6 +10,8 @@
 #include <pthread.h>
 #include <stdbool.h>
 #include <signal.h>
+#include <poll.h>
+#include <gmodule.h>
 
 #include "global_config.h"
 #include "concurrent_queue.h"
@@ -17,6 +19,7 @@
 #include "client_socket.h"
 
 #define UNUSED(x) (void)x
+#define THIRTY_SECONDS 1000 * 30
 
 void set_serv_addr(struct sockaddr_in* sockaddr) {
     sockaddr->sin_family = AF_INET;
@@ -85,6 +88,43 @@ void wait_for_all(pthread_t* threads, size_t len) {
     UNUSED(thread_result);
 }
 
+void init_read_pollfd(struct pollfd* pl, int fd) {
+    memset(pl, 0, sizeof(struct pollfd));
+    pl->fd = fd;
+    pl->events = POLLIN;
+}
+
+void init_write_pollfd(struct pollfd* pl, int fd) {
+    memset(pl, 0, sizeof(struct pollfd));
+    pl->fd = fd;
+    pl->events = POLLOUT;
+}
+
+void handle_connect_event(struct pollfd* ptr, GArray* array, int server_fd) {
+    int client_fd;
+
+    if (ptr->fd == server_fd && (ptr->revents & POLLIN)) {
+        client_fd = accept(server_fd, NULL, NULL);
+        if (client_fd == -1) {
+            perror("Unable to accept connection");
+        }
+        else {
+            printf("Client connected\n");
+            struct pollfd client_poll_fd;
+            init_write_pollfd(&client_poll_fd, client_fd);
+            g_array_append_val(array, client_poll_fd);
+        }
+    }
+}
+
+void handle_write_event(struct pollfd* ptr, GArray* array, concurrent_queue_t* queue, int index) {
+    if (ptr->revents & POLLOUT) {
+        printf("Write event\n");
+        concurrent_queue_push(queue, client_socket_create(ptr->fd));
+        g_array_remove_index(array, index);
+    }
+}
+
 int main(int argc, char** argv) {
     int result = 0;
     if (argc == 1) {
@@ -109,17 +149,22 @@ int main(int argc, char** argv) {
     concurrent_queue_t* queue;
     queue = concurrent_queue_new();
     TRY(init_threads(queue, threads, global_config.threads), delete_queue);
-    int client_fd;
+    GArray* active_file_descriptors = g_array_new(FALSE, FALSE, sizeof(struct pollfd));
+    struct pollfd server_fd;
+    init_read_pollfd(&server_fd, fd);
+    g_array_append_val(active_file_descriptors, server_fd);
+    int poll_res;
     while (true) {
-        client_fd = accept(fd, NULL, NULL);
-        if (client_fd == -1) {
-            perror("Unable to accept connection");
-        }
-        else {
-            printf("Client connected\n");
-            concurrent_queue_push(queue, client_socket_create(client_fd));
+        poll_res = poll((struct pollfd*)active_file_descriptors->data, active_file_descriptors->len, THIRTY_SECONDS);
+        if (poll_res > 0) {
+            for (unsigned int i = 0; i < active_file_descriptors->len; ++i) {
+                struct pollfd* ptr = &((struct pollfd*)active_file_descriptors->data)[i];
+                handle_connect_event(ptr, active_file_descriptors, fd);
+                handle_write_event(ptr, active_file_descriptors, queue, i);
+            }
         }
     }
+    g_array_free(active_file_descriptors, FALSE);
     wait_for_all(threads, global_config.threads);
 delete_queue:
     concurrent_queue_delete(queue);
