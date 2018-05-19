@@ -61,7 +61,7 @@ class Dependencies:
         build_dir = self.path / p
         build_dir.mkdir(exist_ok=True)
         src_dir = self.path / (PurePath(dep))
-        self.run_proc(["./configure", "--prefix={}".format(build_dir.absolute().as_posix())], src_dir)
+        self.run_proc(["./configure", "--prefix={}".format(build_dir.absolute().as_posix()), "--enable-static"], src_dir)
         self.run_proc(["make"], src_dir)
         self.run_proc(["make", "install"], src_dir)
 
