@@ -3,6 +3,10 @@ PYTHON=python3
 CFLAGS= -Wall -Wextra -pedantic
 JANSSON_LIB = dependencies/jansson-2.11-build/lib/libjansson.a
 JANNSON_H = -I./dependencies/jansson-2.11-build/include
+GLIB_H = -I./dependencies/glib-2.56.1-build/include/glib-2.0
+GMODULE_LIB = dependencies/glib-2.56.1-build/lib/libgmodule-2.0.a
+GLIB_LIB = dependencies/glib-2.56.1-build/lib/libglib-2.0.a
+GLIB_CONFIG_H = -I./dependencies/glib-2.56.1-build/lib/glib-2.0/include
 INCLUDE_DIR = -I./include
 DEBUG = -g
 SRC_DIR = src
@@ -14,10 +18,10 @@ deploy: build_binary
 
 build_binary: ${OBJ_FILES}
 	mkdir -p bin
-	${CC} ${DEBUG} -o bin/sherman $^ ${CFLAGS} -lpthread ${JANSSON_LIB}
+	${CC} ${DEBUG} -o bin/sherman $^ ${CFLAGS} -lpthread ${JANSSON_LIB} ${GMODULE_LIB} ${GLIB_LIB}
 
 ${OBJ_DIR}/%.o: ${SRC_DIR}/%.c build_dependencies create_obj_dir
-	${CC} ${DEBUG} -c -o $@ $< ${CFLAGS} -pthread ${INCLUDE_DIR} ${JANNSON_H}
+	${CC} ${DEBUG} -c -o $@ $< ${CFLAGS} -pthread ${INCLUDE_DIR} ${JANNSON_H} ${GLIB_H} ${GLIB_CONFIG_H}
 
 create_obj_dir:
 	mkdir -p ${OBJ_DIR}
