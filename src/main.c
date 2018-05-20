@@ -17,6 +17,7 @@
 #include "concurrent_queue.h"
 #include "error.h"
 #include "client_socket.h"
+#include "consumer.h"
 
 #define UNUSED(x) (void)x
 #define THIRTY_SECONDS 1000 * 30
@@ -25,21 +26,6 @@ void set_serv_addr(struct sockaddr_in* sockaddr) {
     sockaddr->sin_family = AF_INET;
     sockaddr->sin_port = htons(global_config.port);
     sockaddr->sin_addr.s_addr = htonl(INADDR_ANY);
-}
-
-void* consumer_thread_main(void* args) {
-    char buffer[128];
-    concurrent_queue_t* queue = (concurrent_queue_t*)args;
-    while (true) {
-        client_socket_t* client = (client_socket_t*)concurrent_queue_pop(queue);
-        printf("[ThreadId=%lu] Queue pop\n", pthread_self());
-        client_socket_read(client, buffer, 128);
-        buffer[127] = '\0';
-        printf("%s\n", buffer);
-        close(client->fd);
-        client_socket_destroy(client);
-    }
-    return NULL;
 }
 
 int init_threads(concurrent_queue_t* queue, pthread_t* threads, size_t len) {

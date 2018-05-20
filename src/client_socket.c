@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <stdint.h>
 
 #include "client_socket.h"
 
@@ -26,14 +27,13 @@ static int min(int a, int b) {
         return a;
 }
 
-void client_socket_read(client_socket_t* client_socket, char* buffer, size_t buffer_len) {
-    char chunk[32];
+void client_socket_read(client_socket_t* client_socket, uint8_t* buffer, size_t buffer_len) {
+    uint8_t chunk[32];
     ssize_t fetched;
-    char* buffer_ptr = buffer;
+    uint8_t* buffer_ptr = buffer;
     int fd = client_socket->fd;
     int left = buffer_len;
     int to_copy;
-    pthread_mutex_lock(&client_socket->mutex);
     printf("Reading from socket\n");
     do {
         memset(chunk, 0, sizeof(chunk));
@@ -47,5 +47,4 @@ void client_socket_read(client_socket_t* client_socket, char* buffer, size_t buf
         buffer_ptr += to_copy;
         left -= to_copy;
     } while(fetched > 0 && left > 0);
-    pthread_mutex_unlock(&client_socket->mutex);
 }
