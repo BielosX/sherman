@@ -117,12 +117,15 @@ void handle_connect_event(struct pollfd* ptr, GArray* array, int server_fd) {
     }
 }
 
-void handle_write_event(struct pollfd* ptr, GArray* array, concurrent_queue_t* queue, int index) {
+bool handle_write_event(struct pollfd* ptr, GArray* array, concurrent_queue_t* queue, int index) {
+    bool handle = false;
     if (ptr->revents & POLLOUT) {
         printf("Write event\n");
         concurrent_queue_push(queue, client_socket_create(ptr->fd));
         g_array_remove_index(array, index);
+        handle = true;
     }
+    return handle;
 }
 
 int main(int argc, char** argv) {
@@ -160,7 +163,12 @@ int main(int argc, char** argv) {
             for (unsigned int i = 0; i < active_file_descriptors->len; ++i) {
                 struct pollfd* ptr = &((struct pollfd*)active_file_descriptors->data)[i];
                 handle_connect_event(ptr, active_file_descriptors, fd);
-                handle_write_event(ptr, active_file_descriptors, queue, i);
+                /* if item is being removed all elements after it are moved left.
+                 * So if item on index 5 is removed then item on index 6 becomes item on index 5
+                 * and index 5 needs to be handled again */
+                if (handle_write_event(ptr, active_file_descriptors, queue, i)) {
+                    i--;
+                }
             }
         }
     }
