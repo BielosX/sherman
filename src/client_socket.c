@@ -37,7 +37,7 @@ void client_socket_read(client_socket_t* client_socket, uint8_t* buffer, size_t 
     printf("Reading from socket %lu bytes\n", buffer_len);
     do {
         memset(chunk, 0, sizeof(chunk));
-        to_read = min(sizeof(chunk), buffer_len);
+        to_read = min(sizeof(chunk), left);
         fetched = read(fd, chunk, to_read);
         if (fetched < 0) {
             perror("Unable to read from socket");
