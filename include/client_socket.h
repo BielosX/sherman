@@ -11,5 +11,6 @@ typedef struct {
 client_socket_t* client_socket_create(int fd);
 void client_socket_destroy(client_socket_t* client_socket);
 void client_socket_read(client_socket_t* client_socket, uint8_t* buffer, size_t buffer_len);
+void client_socket_write(client_socket_t* client_socket, uint8_t* buffer, size_t buffer_len);
 
 #endif

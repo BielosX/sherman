@@ -9,6 +9,7 @@
 #include "concurrent_queue.h"
 #include "client_socket.h"
 #include "msg_header.h"
+#include "hex.h"
 
 static void to_host_byte_order(msg_header_t* header) {
     header->topic_len = ntohs(header->topic_len);
@@ -18,9 +19,11 @@ static void to_host_byte_order(msg_header_t* header) {
 static void handle_subscribe(msg_header_t* header, client_socket_t* client) {
     uint8_t buffer[128];
     memset(buffer, 0, sizeof(buffer));
+    printf("Topic len: %d\n", header->topic_len);
     if (header->topic_len < 128) {
         client_socket_read(client, buffer, header->topic_len);
         printf("topic: %s\n", buffer);
+        //print_hex(buffer, sizeof(buffer));
     }
 }
 
@@ -46,8 +49,8 @@ void* consumer_thread_main(void* args) {
         printf("[ThreadId=%lu] Queue pop\n", pthread_self());
         pthread_mutex_lock(&client->mutex);
         msg_header_t header;
-        to_host_byte_order(&header);
         client_socket_read(client, (uint8_t*)&header, sizeof(msg_header_t));
+        to_host_byte_order(&header);
         switch(header.opcode) {
             case SUBSCRIBE:
                 printf("[ThreadId=%lu] Subscribe request\n", pthread_self());

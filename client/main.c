@@ -2,11 +2,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdint.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 
 #include "msg_header.h"
+#include "client_socket.h"
+#include "hex.h"
 
 void init_sockaddr(struct sockaddr_in* sockaddr, struct in_addr* addr, int port) {
     sockaddr->sin_family = AF_INET;
@@ -35,6 +38,19 @@ int main(int argc, char** argv) {
     if (connect(fd, (struct sockaddr*)&server_addr, sizeof(struct sockaddr_in)) == -1) {
         perror("Unable to connect");
     }
+    char buffer[32];
+    printf("Topic: ");
+    memset(buffer, 0, sizeof(buffer));
+    msg_header_t header;
+    scanf("%s", buffer);
+    header.opcode = SUBSCRIBE;
+    header.topic_len = htons(strlen(buffer));
+    header.body_len = 0;
+    client_socket_t* client_socket = client_socket_create(fd);
+    client_socket_write(client_socket, (uint8_t*)&header, sizeof(header));
+    client_socket_write(client_socket, (uint8_t*)buffer, strlen(buffer));
+    print_hex((uint8_t*)buffer, sizeof(buffer));
+    client_socket_destroy(client_socket);
     close(fd);
     return 0;
 }

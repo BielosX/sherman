@@ -33,18 +33,36 @@ void client_socket_read(client_socket_t* client_socket, uint8_t* buffer, size_t 
     uint8_t* buffer_ptr = buffer;
     int fd = client_socket->fd;
     int left = buffer_len;
-    int to_copy;
-    printf("Reading from socket\n");
+    int to_read;
+    printf("Reading from socket %lu bytes\n", buffer_len);
     do {
         memset(chunk, 0, sizeof(chunk));
-        fetched = read(fd, chunk, sizeof(chunk));
+        to_read = min(sizeof(chunk), buffer_len);
+        fetched = read(fd, chunk, to_read);
         if (fetched < 0) {
             perror("Unable to read from socket");
             break;
         }
-        to_copy = min(fetched, buffer_len);
-        memcpy(buffer_ptr, chunk, to_copy);
-        buffer_ptr += to_copy;
-        left -= to_copy;
+        memcpy(buffer_ptr, chunk, fetched);
+        buffer_ptr += fetched;
+        left -= fetched;
     } while(fetched > 0 && left > 0);
 }
+
+void client_socket_write(client_socket_t* client_socket, uint8_t* buffer, size_t buffer_len) {
+    uint8_t* buffer_ptr = buffer;
+    int fd = client_socket->fd;
+    int left = buffer_len;
+    ssize_t sent;
+    printf("Writing to socket %lu bytes\n", buffer_len);
+    do {
+        sent = write(fd, buffer_ptr, left);
+        if (sent == -1) {
+            perror("Unable to write to socket");
+            break;
+        }
+        left -= sent;
+        buffer_ptr += sent;
+    } while(left > 0);
+}
+

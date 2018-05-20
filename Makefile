@@ -23,9 +23,9 @@ build_binary: ${OBJ_FILES}
 ${OBJ_DIR}/%.o: ${SRC_DIR}/%.c build_dependencies create_obj_dir
 	${CC} ${DEBUG} -c -o $@ $< ${CFLAGS} -pthread ${INCLUDE_DIR} ${JANNSON_H} ${GLIB_H} ${GLIB_CONFIG_H}
 
-build_client:
+build_client: build_binary
 	mkdir -p bin
-	${CC} ${DEBUG} -o bin/client client/main.c ${CFLAGS} -lpthread ${INCLUDE_DIR}
+	${CC} ${DEBUG} -o bin/client client/main.c ${CFLAGS} -lpthread ${INCLUDE_DIR} ${OBJ_DIR}/client_socket.o ${OBJ_DIR}/hex.o
 
 create_obj_dir:
 	mkdir -p ${OBJ_DIR}
