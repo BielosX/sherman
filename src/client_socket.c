@@ -35,7 +35,7 @@ int client_socket_read(client_socket_t* client_socket, uint8_t* buffer, size_t b
     int left = buffer_len;
     int to_read;
     int total_fetched = 0;
-    printf("Reading from socket %lu bytes\n", buffer_len);
+    printf("Trying to read from socket %lu bytes\n", buffer_len);
     do {
         memset(chunk, 0, sizeof(chunk));
         to_read = min(sizeof(chunk), left);
@@ -63,7 +63,7 @@ void client_socket_write(client_socket_t* client_socket, uint8_t* buffer, size_t
     int fd = client_socket->fd;
     int left = buffer_len;
     ssize_t sent;
-    printf("Writing to socket %lu bytes\n", buffer_len);
+    printf("Trying to write socket %lu bytes\n", buffer_len);
     do {
         sent = write(fd, buffer_ptr, left);
         if (sent == -1) {
