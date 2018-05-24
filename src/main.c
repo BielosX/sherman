@@ -162,7 +162,7 @@ int main(int argc, char** argv) {
         client_socket_t* client_socket;
         struct pollfd client_poll_fd;
         /* this is the only consumer thread that fetches from this queue
-         * so it is not possible to get higher size and stall next */
+         * so it is not possible to get higher size and stall during pop procedure */
         for (int x = 0; x < size; ++x) {
             client_socket = (client_socket_t*)concurrent_queue_pop(queues[1]);
             init_write_pollfd(&client_poll_fd, client_socket->fd);
