@@ -16,15 +16,16 @@ static void to_host_byte_order(msg_header_t* header) {
     header->body_len = ntohs(header->body_len);
 }
 
-static void handle_subscribe(msg_header_t* header, client_socket_t* client) {
+static int handle_subscribe(msg_header_t* header, client_socket_t* client) {
+    int result;
     uint8_t buffer[128];
     memset(buffer, 0, sizeof(buffer));
     printf("Topic len: %d\n", header->topic_len);
     if (header->topic_len < 128) {
-        client_socket_read(client, buffer, header->topic_len);
+        result = client_socket_read(client, buffer, header->topic_len);
         printf("topic: %s\n", buffer);
-        //print_hex(buffer, sizeof(buffer));
     }
+    return result;
 }
 
 static void handle_send(msg_header_t* header, client_socket_t* client) {
@@ -43,7 +44,10 @@ static void handle_send(msg_header_t* header, client_socket_t* client) {
 }
 
 void* consumer_thread_main(void* args) {
-    concurrent_queue_t* queue = (concurrent_queue_t*)args;
+    concurrent_queue_t** queues = (concurrent_queue_t**)args;
+    concurrent_queue_t* queue = queues[0];
+    concurrent_queue_t* resp_queue = queues[1];
+    int result;
     while (true) {
         client_socket_t* client = (client_socket_t*)concurrent_queue_pop(queue);
         printf("[ThreadId=%lu] Queue pop\n", pthread_self());
@@ -54,7 +58,7 @@ void* consumer_thread_main(void* args) {
         switch(header.opcode) {
             case SUBSCRIBE:
                 printf("[ThreadId=%lu] Subscribe request\n", pthread_self());
-                handle_subscribe(&header, client);
+                result = handle_subscribe(&header, client);
                 break;
             case SEND:
                 printf("[ThreadId=%lu] Send request\n", pthread_self());
@@ -64,8 +68,15 @@ void* consumer_thread_main(void* args) {
                 break;
         }
         pthread_mutex_unlock(&client->mutex);
-        close(client->fd);
-        client_socket_destroy(client);
+        if (result == -1 || result == 0) {
+            printf("[ThreadId=%lu] Connection closed or error\n", pthread_self());
+            close(client->fd);
+            client_socket_destroy(client);
+        }
+        else {
+            printf("[ThreadId=%lu] Sending fd=%d back\n", pthread_self(), client->fd);
+            concurrent_queue_push(resp_queue, client);
+        }
     }
     return NULL;
 }

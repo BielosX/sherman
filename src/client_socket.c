@@ -27,13 +27,14 @@ static int min(int a, int b) {
         return a;
 }
 
-void client_socket_read(client_socket_t* client_socket, uint8_t* buffer, size_t buffer_len) {
+int client_socket_read(client_socket_t* client_socket, uint8_t* buffer, size_t buffer_len) {
     uint8_t chunk[32];
     ssize_t fetched;
     uint8_t* buffer_ptr = buffer;
     int fd = client_socket->fd;
     int left = buffer_len;
     int to_read;
+    int total_fetched = 0;
     printf("Reading from socket %lu bytes\n", buffer_len);
     do {
         memset(chunk, 0, sizeof(chunk));
@@ -46,7 +47,15 @@ void client_socket_read(client_socket_t* client_socket, uint8_t* buffer, size_t 
         memcpy(buffer_ptr, chunk, fetched);
         buffer_ptr += fetched;
         left -= fetched;
-    } while(fetched > 0 && left > 0);
+        total_fetched += fetched;
+    } while(left > 0 && fetched > 0);
+    if (fetched == 0) {
+        return 0;
+    }
+    if (fetched > 0) {
+        return total_fetched;
+    }
+    return -1;
 }
 
 void client_socket_write(client_socket_t* client_socket, uint8_t* buffer, size_t buffer_len) {

@@ -23,5 +23,6 @@ void concurrent_queue_push(concurrent_queue_t* queue, void* item);
 void* concurrent_queue_pop(concurrent_queue_t* queue);
 concurrent_queue_t* concurrent_queue_new(void);
 void concurrent_queue_delete(concurrent_queue_t* queue);
+int get_size(concurrent_queue_t* queue);
 
 #endif

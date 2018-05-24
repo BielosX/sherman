@@ -90,3 +90,10 @@ void concurrent_queue_delete(concurrent_queue_t* queue) {
     free(queue);
 }
 
+int get_size(concurrent_queue_t* queue) {
+    int result;
+    if (sem_getvalue(&queue->tickets, &result) == -1) {
+        perror("Unable to get semaphore value");
+    }
+    return result;
+}
