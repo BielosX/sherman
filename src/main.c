@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -83,7 +85,7 @@ void init_read_pollfd(struct pollfd* pl, int fd) {
 void init_write_pollfd(struct pollfd* pl, int fd) {
     memset(pl, 0, sizeof(struct pollfd));
     pl->fd = fd;
-    pl->events = POLLOUT;
+    pl->events = POLLOUT | POLLRDHUP;
 }
 
 void handle_connect_event(struct pollfd* ptr, GArray* array, int server_fd) {
@@ -149,12 +151,20 @@ int main(int argc, char** argv) {
         if (poll_res > 0) {
             for (unsigned int i = 0; i < active_file_descriptors->len; ++i) {
                 struct pollfd* ptr = &((struct pollfd*)active_file_descriptors->data)[i];
-                handle_connect_event(ptr, active_file_descriptors, fd);
-                /* if item is being removed all elements after it are moved left.
-                 * So if item on index 5 is removed then item on index 6 becomes item on index 5
-                 * and index 5 needs to be handled again */
-                if (handle_write_event(ptr, active_file_descriptors, queues[0], i)) {
+                if (ptr->revents & POLLRDHUP) {
+                    printf("Connection closed fd=%d\n", ptr->fd);
+                    close(ptr->fd);
+                    g_array_remove_index(active_file_descriptors, i);
                     i--;
+                }
+                else {
+                    handle_connect_event(ptr, active_file_descriptors, fd);
+                    /* if item is being removed all elements after it are moved left.
+                     * So if item on index 5 is removed then item on index 6 becomes item on index 5
+                     * and index 5 needs to be handled again */
+                    if (handle_write_event(ptr, active_file_descriptors, queues[0], i)) {
+                        i--;
+                    }
                 }
             }
         }
