@@ -30,11 +30,11 @@ void set_serv_addr(struct sockaddr_in* sockaddr) {
     sockaddr->sin_addr.s_addr = htonl(INADDR_ANY);
 }
 
-int init_threads(concurrent_queue_t** queues, pthread_t* threads, size_t len) {
+int init_threads(consumer_attr_t* attr, pthread_t* threads, size_t len) {
     bool thread_init_failed = false;
     int result;
     for (unsigned int x = 0; x < len; ++x) {
-        if (pthread_create(&threads[x], NULL, consumer_thread_main, queues) != 0) {
+        if (pthread_create(&threads[x], NULL, consumer_thread_main, attr) != 0) {
             printf("ERROR: Unable to create thread\n");
             thread_init_failed = true;
             break;
@@ -137,10 +137,10 @@ int main(int argc, char** argv) {
     TRY(inet_socket_bind(fd, &addr_in), exit_main);
     TRY(inet_socket_listen(fd), exit_main);
     print_global_config();
-    concurrent_queue_t* queues[2];
-    queues[0] = concurrent_queue_new();
-    queues[1] = concurrent_queue_new();
-    TRY(init_threads(queues, threads, global_config.threads), delete_queue);
+    consumer_attr_t attr;
+    attr.request_queue = concurrent_queue_new();
+    attr.socket_ret_queue = concurrent_queue_new();
+    TRY(init_threads(&attr, threads, global_config.threads), delete_queue);
     GArray* active_file_descriptors = g_array_new(FALSE, FALSE, sizeof(struct pollfd));
     struct pollfd server_fd;
     init_read_pollfd(&server_fd, fd);
@@ -162,19 +162,19 @@ int main(int argc, char** argv) {
                     /* if item is being removed all elements after it are moved left.
                      * So if item on index 5 is removed then item on index 6 becomes item on index 5
                      * and index 5 needs to be handled again */
-                    if (handle_write_event(ptr, active_file_descriptors, queues[0], i)) {
+                    if (handle_write_event(ptr, active_file_descriptors, attr.request_queue, i)) {
                         i--;
                     }
                 }
             }
         }
-        int size = get_size(queues[1]);
+        int size = get_size(attr.socket_ret_queue);
         client_socket_t* client_socket;
         struct pollfd client_poll_fd;
         /* this is the only consumer thread that fetches from this queue
          * so it is not possible to get higher size and stall during pop procedure */
         for (int x = 0; x < size; ++x) {
-            client_socket = (client_socket_t*)concurrent_queue_pop(queues[1]);
+            client_socket = (client_socket_t*)concurrent_queue_pop(attr.socket_ret_queue);
             init_write_pollfd(&client_poll_fd, client_socket->fd);
             printf("Client socket fd=%d request handled\n", client_socket->fd);
             g_array_append_val(active_file_descriptors, client_poll_fd);
@@ -184,8 +184,8 @@ int main(int argc, char** argv) {
     g_array_free(active_file_descriptors, FALSE);
     wait_for_all(threads, global_config.threads);
 delete_queue:
-    concurrent_queue_delete(queues[0]);
-    concurrent_queue_delete(queues[1]);
+    concurrent_queue_delete(attr.request_queue);
+    concurrent_queue_delete(attr.socket_ret_queue);
     close(fd);
 exit_main:
     free(threads);

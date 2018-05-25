@@ -44,9 +44,9 @@ static void handle_send(msg_header_t* header, client_socket_t* client) {
 }
 
 void* consumer_thread_main(void* args) {
-    concurrent_queue_t** queues = (concurrent_queue_t**)args;
-    concurrent_queue_t* queue = queues[0];
-    concurrent_queue_t* resp_queue = queues[1];
+    consumer_attr_t* attr = (consumer_attr_t*)args;
+    concurrent_queue_t* queue = attr->request_queue;
+    concurrent_queue_t* resp_queue = attr->socket_ret_queue;
     int result;
     while (true) {
         client_socket_t* client = (client_socket_t*)concurrent_queue_pop(queue);
