@@ -140,6 +140,7 @@ int main(int argc, char** argv) {
     consumer_attr_t attr;
     attr.request_queue = concurrent_queue_new();
     attr.socket_ret_queue = concurrent_queue_new();
+    attr.subscribers = subscribers_new();
     TRY(init_threads(&attr, threads, global_config.threads), delete_queue);
     GArray* active_file_descriptors = g_array_new(FALSE, FALSE, sizeof(struct pollfd));
     struct pollfd server_fd;
@@ -186,6 +187,7 @@ int main(int argc, char** argv) {
 delete_queue:
     concurrent_queue_delete(attr.request_queue);
     concurrent_queue_delete(attr.socket_ret_queue);
+    subscribers_delete(attr.subscribers);
     close(fd);
 exit_main:
     free(threads);
