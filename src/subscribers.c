@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <stdbool.h>
+#include <stdint.h>
 
 #include "subscribers.h"
 
@@ -57,6 +59,19 @@ subscribers_list_t* subscribers_get(subscribers_t* ptr, char* topic) {
     return list;
 }
 
+static bool already_subscribes(subscribers_list_t* list, subscriber_t* subscriber) {
+    bool result = false;
+    subscriber_t sub;
+    for (uint32_t i = 0; i < list->subscribers->len; ++i) {
+        sub = g_array_index(list->subscribers, subscriber_t, i);
+        if (sub.fd == subscriber->fd) {
+            result = true;
+            break;
+        }
+    }
+    return result;
+}
+
 void subscribers_add(subscribers_t* ptr, char* topic, subscriber_t* subscriber) {
     subscribers_list_t* list;
     pthread_mutex_lock(&ptr->mutex);
@@ -67,10 +82,15 @@ void subscribers_add(subscribers_t* ptr, char* topic, subscriber_t* subscriber) 
         g_array_append_val(list->subscribers, *subscriber);
     }
     else {
-        printf("Adding subscriber to topic: %s\n", topic);
-        pthread_mutex_lock(&list->mutex);
-        g_array_append_val(list->subscribers, *subscriber);
-        pthread_mutex_unlock(&list->mutex);
+        if (already_subscribes(list, subscriber)) {
+            printf("fd=%d already subscribes topic %s\n", subscriber->fd, topic);
+        }
+        else {
+            printf("Adding subscriber to topic: %s\n", topic);
+            pthread_mutex_lock(&list->mutex);
+            g_array_append_val(list->subscribers, *subscriber);
+            pthread_mutex_unlock(&list->mutex);
+        }
     }
     g_hash_table_insert(ptr->hash_table, topic, list);
     pthread_mutex_unlock(&ptr->mutex);
