@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <pthread.h>
+#include <poll.h>
 
 #include "msg_header.h"
 #include "client_socket.h"
@@ -15,23 +16,48 @@
 
 typedef struct {
     client_socket_t* client_socket;
+    int pipe_read_fd;
 } listener_args_t;
+
+void init_listener_pollfds(struct pollfd fds[], listener_args_t* args) {
+    memset(fds, 0, sizeof(struct pollfd) * 2);
+    fds[0].fd = args->pipe_read_fd;
+    fds[0].events = POLLIN;
+    fds[1].fd = args->client_socket->fd;
+    fds[1].events = POLLIN;
+}
 
 void* listener(void* args) {
     listener_args_t* listener_args = (listener_args_t*)args;
     msg_header_t header;
     uint8_t topic[128];
     uint8_t body[128];
-    while(true) {
-        /* it is fine to use the same socket in two threads unless both use it to write */
-        client_socket_read(listener_args->client_socket, (uint8_t*)&header, sizeof(msg_header_t));
-        memset(topic, 0, sizeof(topic));
-        memset(body, 0, sizeof(topic));
-        client_socket_read(listener_args->client_socket, topic, ntohs(header.topic_len));
-        client_socket_read(listener_args->client_socket, body, ntohs(header.body_len));
-        printf("topic: %s\n", topic);
-        printf("body: %s\n", body);
-    }
+    struct pollfd fds[2];
+    init_listener_pollfds(fds, listener_args);
+    bool exit = false;
+    int poll_ret;
+    do {
+        poll_ret = poll(fds, 2, -1);
+        if (poll_ret > 0) {
+            if (fds[1].revents & POLLIN) {
+                /* it is fine to use the same socket in two threads unless both use it to write */
+                client_socket_read(listener_args->client_socket, (uint8_t*)&header, sizeof(msg_header_t));
+                memset(topic, 0, sizeof(topic));
+                memset(body, 0, sizeof(topic));
+                client_socket_read(listener_args->client_socket, topic, ntohs(header.topic_len));
+                client_socket_read(listener_args->client_socket, body, ntohs(header.body_len));
+                printf("topic: %s\n", topic);
+                printf("body: %s\n", body);
+            }
+            if (fds[0].revents & POLLIN) {
+                if (read(fds[0].fd, &exit, sizeof(exit)) == -1) {
+                    perror("Unable to read from the pipe");
+                }
+            }
+        }
+    } while (!exit);
+    printf("Finishing thread\n");
+    return NULL;
 }
 
 void init_sockaddr(struct sockaddr_in* sockaddr, struct in_addr* addr, int port) {
@@ -83,13 +109,21 @@ int main(int argc, char** argv) {
     }
     pthread_t thread;
     listener_args_t args;
+    int pipefd[2];
+    if (pipe(pipefd) == -1) {
+        perror("Unable to create pipe");
+        close(fd);
+        exit(-1);
+    }
     client_socket_t* client_socket = client_socket_create(fd);
     args.client_socket = client_socket;
+    args.pipe_read_fd = pipefd[0];
     if (pthread_create(&thread, NULL, listener, &args) < 0) {
         printf("Unable to start thread\n");
         goto destroy_socket;
     }
     unsigned int choice;
+    bool finish_thread;
     do {
     printf("1. Subscribe\n 2. Send\n 3. Exit\n");
     scanf("%u", &choice);
@@ -100,11 +134,19 @@ int main(int argc, char** argv) {
             case 2:
                 send_to_all(client_socket);
                 break;
+            case 3:
+                finish_thread = true;
+                if (write(pipefd[1], &finish_thread, sizeof(finish_thread)) == -1) {
+                    perror("Unable to write to pipe");
+                }
+                break;
             default:
                 break;
         }
     } while(choice != 3);
-
+    if (pthread_join(thread, NULL) < 0) {
+        printf("pthread_join failed\n");
+    }
 destroy_socket:
     client_socket_destroy(client_socket);
     close(fd);
