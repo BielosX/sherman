@@ -40,7 +40,7 @@ void* listener(void* args) {
         poll_ret = poll(fds, 2, -1);
         if (poll_ret > 0) {
             if (fds[1].revents & POLLIN) {
-                /* it is fine to use the same socket in two threads unless both use it to write */
+                /* it is fine to use the same socket in two threads unless both use it to write or read */
                 client_socket_read(listener_args->client_socket, (uint8_t*)&header, sizeof(msg_header_t));
                 memset(topic, 0, sizeof(topic));
                 memset(body, 0, sizeof(topic));
