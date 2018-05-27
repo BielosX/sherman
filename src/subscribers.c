@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 #include "subscribers.h"
 
 #define UNUSED(x) (void)x
@@ -60,13 +62,16 @@ void subscribers_add(subscribers_t* ptr, char* topic, subscriber_t* subscriber) 
     pthread_mutex_lock(&ptr->mutex);
     list = g_hash_table_lookup(ptr->hash_table, topic);
     if (list == NULL) {
+        printf("Adding first subscriber to topic: %s\n", topic);
         list = subscribers_list_new();
         g_array_append_val(list->subscribers, *subscriber);
     }
     else {
+        printf("Adding subscriber to topic: %s\n", topic);
         pthread_mutex_lock(&list->mutex);
         g_array_append_val(list->subscribers, *subscriber);
         pthread_mutex_unlock(&list->mutex);
     }
+    g_hash_table_insert(ptr->hash_table, topic, list);
     pthread_mutex_unlock(&ptr->mutex);
 }

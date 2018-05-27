@@ -57,23 +57,29 @@ static void handle_send(msg_header_t* header, client_socket_t* client, subscribe
             client_socket_read(client, body, header->body_len);
             printf("body: %s\n", body);
             subscribers_list_t* list = subscribers_get(subscribers, (char*)topic);
-            pthread_mutex_lock(&list->mutex);
-            msg_header_t hdr;
-            memset(&hdr, 0, sizeof(msg_header_t));
-            hdr.opcode = SEND;
-            hdr.topic_len = htons(header->topic_len);
-            hdr.topic_len = htons(header->body_len);
-            for(uint32_t i = 0; i < list->subscribers->len; ++i) {
-                subscriber_t sub = g_array_index(list->subscribers, subscriber_t, i);
-                client_socket_t* sub_socket = client_socket_create(sub.fd);
-                pthread_mutex_lock(&sub_socket->mutex);
-                client_socket_write(sub_socket, (uint8_t*)&hdr, sizeof(hdr));
-                client_socket_write(sub_socket, topic, header->topic_len);
-                client_socket_write(sub_socket, body, header->body_len);
-                pthread_mutex_unlock(&sub_socket->mutex);
-                client_socket_destroy(sub_socket);
+            if (list != NULL) {
+                printf("Number of subscribers: %u\n", list->subscribers->len);
+                pthread_mutex_lock(&list->mutex);
+                msg_header_t hdr;
+                memset(&hdr, 0, sizeof(msg_header_t));
+                hdr.opcode = SEND;
+                hdr.topic_len = htons(header->topic_len);
+                hdr.body_len = htons(header->body_len);
+                for(uint32_t i = 0; i < list->subscribers->len; ++i) {
+                    subscriber_t sub = g_array_index(list->subscribers, subscriber_t, i);
+                    client_socket_t* sub_socket = client_socket_create(sub.fd);
+                    pthread_mutex_lock(&sub_socket->mutex);
+                    client_socket_write(sub_socket, (uint8_t*)&hdr, sizeof(hdr));
+                    client_socket_write(sub_socket, topic, header->topic_len);
+                    client_socket_write(sub_socket, body, header->body_len);
+                    pthread_mutex_unlock(&sub_socket->mutex);
+                    client_socket_destroy(sub_socket);
+                }
+                pthread_mutex_unlock(&list->mutex);
             }
-            pthread_mutex_unlock(&list->mutex);
+            else {
+                printf("No subscriptions for topic: %s\n", topic);
+            }
         }
     }
 }

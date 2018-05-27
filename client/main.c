@@ -40,6 +40,26 @@ void init_sockaddr(struct sockaddr_in* sockaddr, struct in_addr* addr, int port)
     memcpy(&sockaddr->sin_addr, addr, sizeof(struct in_addr));
 }
 
+void subscribe(client_socket_t* client_socket) {
+    char buffer[32];
+    printf("Topic: \n");
+    memset(buffer, 0, sizeof(buffer));
+    scanf("%s", buffer);
+    subscribe_to_topic(client_socket, buffer);
+}
+
+void send_to_all(client_socket_t* client_socket) {
+    char topic[32];
+    char body[32];
+    memset(topic, 0, sizeof(topic));
+    memset(body, 0, sizeof(body));
+    printf("Topic: \n");
+    scanf("%s", topic);
+    printf("Body: \n");
+    scanf("%s", body);
+    send_to_topic(client_socket, topic, (uint8_t*)body, strlen(body) + 1);
+}
+
 int main(int argc, char** argv) {
     if (argc < 3) {
         printf("client server_ip server_port");
@@ -69,11 +89,22 @@ int main(int argc, char** argv) {
         printf("Unable to start thread\n");
         goto destroy_socket;
     }
-    char buffer[32];
-    printf("Topic: \n");
-    memset(buffer, 0, sizeof(buffer));
-    scanf("%s", buffer);
-    subscribe_to_topic(client_socket, buffer);
+    unsigned int choice;
+    do {
+    printf("1. Subscribe\n 2. Send\n 3. Exit\n");
+    scanf("%u", &choice);
+        switch(choice) {
+            case 1:
+                subscribe(client_socket);
+                break;
+            case 2:
+                send_to_all(client_socket);
+                break;
+            default:
+                break;
+        }
+    } while(choice != 3);
+
 destroy_socket:
     client_socket_destroy(client_socket);
     close(fd);
