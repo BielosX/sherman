@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include "client_socket.h"
+
 #define SUBSCRIBE 1
 #define SEND 2
 

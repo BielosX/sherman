@@ -3,13 +3,36 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <pthread.h>
 
 #include "msg_header.h"
 #include "client_socket.h"
-#include "hex.h"
+#include "request.h"
+
+typedef struct {
+    client_socket_t* client_socket;
+} listener_args_t;
+
+void* listener(void* args) {
+    listener_args_t* listener_args = (listener_args_t*)args;
+    msg_header_t header;
+    uint8_t topic[128];
+    uint8_t body[128];
+    while(true) {
+        /* it is fine to use the same socket in two threads unless both use it to write */
+        client_socket_read(listener_args->client_socket, (uint8_t*)&header, sizeof(msg_header_t));
+        memset(topic, 0, sizeof(topic));
+        memset(body, 0, sizeof(topic));
+        client_socket_read(listener_args->client_socket, topic, ntohs(header.topic_len));
+        client_socket_read(listener_args->client_socket, body, ntohs(header.body_len));
+        printf("topic: %s\n", topic);
+        printf("body: %s\n", body);
+    }
+}
 
 void init_sockaddr(struct sockaddr_in* sockaddr, struct in_addr* addr, int port) {
     sockaddr->sin_family = AF_INET;
@@ -38,18 +61,20 @@ int main(int argc, char** argv) {
     if (connect(fd, (struct sockaddr*)&server_addr, sizeof(struct sockaddr_in)) == -1) {
         perror("Unable to connect");
     }
-    char buffer[32];
-    printf("Topic: ");
-    memset(buffer, 0, sizeof(buffer));
-    msg_header_t header;
-    scanf("%s", buffer);
-    header.opcode = SUBSCRIBE;
-    header.topic_len = htons(strlen(buffer));
-    header.body_len = 0;
+    pthread_t thread;
+    listener_args_t args;
     client_socket_t* client_socket = client_socket_create(fd);
-    client_socket_write(client_socket, (uint8_t*)&header, sizeof(header));
-    client_socket_write(client_socket, (uint8_t*)buffer, strlen(buffer));
-    print_hex((uint8_t*)buffer, sizeof(buffer));
+    args.client_socket = client_socket;
+    if (pthread_create(&thread, NULL, listener, &args) < 0) {
+        printf("Unable to start thread\n");
+        goto destroy_socket;
+    }
+    char buffer[32];
+    printf("Topic: \n");
+    memset(buffer, 0, sizeof(buffer));
+    scanf("%s", buffer);
+    subscribe_to_topic(client_socket, buffer);
+destroy_socket:
     client_socket_destroy(client_socket);
     close(fd);
     return 0;

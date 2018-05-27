@@ -2,6 +2,7 @@
 #define __CLIENT_SOCKET_H__
 
 #include <stdint.h>
+#include <pthread.h>
 
 typedef struct {
     int fd;

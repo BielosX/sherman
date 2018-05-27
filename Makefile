@@ -25,7 +25,7 @@ ${OBJ_DIR}/%.o: ${SRC_DIR}/%.c build_dependencies create_obj_dir
 
 build_client: build_binary
 	mkdir -p bin
-	${CC} ${DEBUG} -o bin/client client/main.c ${CFLAGS} -lpthread ${INCLUDE_DIR} ${OBJ_DIR}/client_socket.o ${OBJ_DIR}/hex.o
+	${CC} ${DEBUG} -o bin/client client/main.c ${CFLAGS} -lpthread ${INCLUDE_DIR} ${OBJ_DIR}/client_socket.o ${OBJ_DIR}/request.o
 
 create_obj_dir:
 	mkdir -p ${OBJ_DIR}
