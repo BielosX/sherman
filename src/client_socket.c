@@ -7,6 +7,8 @@
 
 #include "client_socket.h"
 
+#define CHUNK_SIZE 32
+
 client_socket_t* client_socket_create(int fd) {
     client_socket_t* client_socket;
     client_socket = (client_socket_t*)malloc(sizeof(client_socket_t));
@@ -28,7 +30,7 @@ static int min(int a, int b) {
 }
 
 int client_socket_read(client_socket_t* client_socket, uint8_t* buffer, size_t buffer_len) {
-    uint8_t chunk[32];
+    uint8_t chunk[CHUNK_SIZE];
     ssize_t fetched;
     uint8_t* buffer_ptr = buffer;
     int fd = client_socket->fd;
